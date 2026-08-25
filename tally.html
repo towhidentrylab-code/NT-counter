@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tally</title>
+<style>
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background:
+      radial-gradient(ellipse 900px 600px at 62% 45%, rgba(180,130,60,0.07), transparent 60%),
+      #131110;
+    color:#f3ead2;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height:100vh;
+    -webkit-tap-highlight-color: transparent;
+    user-select:none;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .gear{
+    position:fixed;
+    top:20px;
+    left:20px;
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    border:1px solid rgba(243,234,210,0.18);
+    background:transparent;
+    color:#a99a7c;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    z-index:5;
+  }
+  .gear:hover{ border-color:#c9a05c; color:#c9a05c; }
+  .gear svg{ width:16px; height:16px; }
+
+  .status{
+    position:fixed;
+    top:26px;
+    right:24px;
+    font-size:11px;
+    letter-spacing:0.08em;
+    color:#7c8f66;
+    opacity:0;
+    transition:opacity .3s ease;
+    z-index:5;
+  }
+  .status.show{ opacity:1; }
+
+  .stage{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:100px 24px 120px;
+    text-align:center;
+  }
+
+  .label{
+    font-size:12px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:#c9a05c;
+    margin-bottom:26px;
+  }
+
+  .digit-box{
+    min-width:104px;
+    padding:0 14px;
+    height:150px;
+    background:#0c0a08;
+    border:1px solid rgba(243,234,210,0.08);
+    border-radius:14px;
+    box-shadow: inset 0 3px 12px rgba(0,0,0,0.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:64px;
+    font-weight:700;
+    color:#f3ead2;
+    letter-spacing:0.01em;
+  }
+
+  .desc{
+    margin-top:30px;
+    max-width:340px;
+    font-size:14px;
+    line-height:1.6;
+    color:#8f8678;
+  }
+
+  .sheet-btn{
+    margin-top:34px;
+    background:none;
+    border:1px solid rgba(243,234,210,0.16);
+    color:#c9a05c;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    padding:10px 18px;
+    border-radius:999px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .sheet-btn:hover{ border-color:#c9a05c; }
+  .sheet-btn .dot{
+    width:6px; height:6px;
+    border-radius:50%;
+    background:#c9a05c;
+  }
+
+  .bottom-bar{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    background:#1a1512;
+    border-top:1px solid rgba(243,234,210,0.08);
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    z-index:5;
+  }
+  .bottom-bar > button{
+    background:none;
+    border:none;
+    border-left:1px solid rgba(243,234,210,0.08);
+    color:#f3ead2;
+    padding:16px 8px 18px;
+    cursor:pointer;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+  }
+  .bottom-bar > button:first-child{ border-left:none; }
+  .bottom-bar .sym{ font-size:16px; line-height:1; }
+  .bottom-bar .sub-sym{ color:#c05c4a; }
+  .bottom-bar .add-sym{ color:#c9a05c; }
+  .bottom-bar .word{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#c8bfa8;
+  }
+  .bottom-bar .reset-word{
+    font-size:16px;
+    font-weight:700;
+    color:#f3ead2;
+    letter-spacing:0.01em;
+    text-transform:none;
+  }
+  .bottom-bar .reset-sub{
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:#8f8678;
+  }
+
+  .overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.6);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .overlay.show{ display:flex; }
+  .modal{
+    background:#1e1a15;
+    border:1px solid rgba(243,234,210,0.1);
+    border-radius:16px;
+    padding:22px;
+    max-width:360px;
+    width:100%;
+    text-align:left;
+    max-height:80vh;
+    overflow-y:auto;
+  }
+  .modal h3{
+    margin:0 0 8px;
+    font-size:16px;
+    font-weight:700;
+  }
+  .modal p{
+    margin:0 0 18px;
+    font-size:13px;
+    color:#a99a7c;
+    line-height:1.55;
+  }
+  .modal .row{ display:flex; gap:10px; }
+  .modal button.action{
+    flex:1;
+    padding:11px;
+    border-radius:9px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    border:1px solid rgba(243,234,210,0.16);
+    background:none;
+    color:#f3ead2;
+  }
+  .modal button.confirm{
+    background:#a24b3c;
+    border-color:#a24b3c;
+    color:#fbe8e3;
+  }
+
+  .hist-section h4{
+    font-size:12px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:#c9a05c;
+    margin:0 0 10px;
+  }
+  .hist-list{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:16px;
+  }
+  .hist-row{
+    display:flex;
+    justify-content:space-between;
+    background:#151110;
+    border:1px solid rgba(243,234,210,0.06);
+    border-radius:8px;
+    padding:9px 12px;
+    font-size:12px;
+  }
+  .hist-row .ts{ color:#8f8678; }
+  .hist-row .val{ color:#7c8f66; font-weight:700; }
+  .hist-empty{
+    font-size:12px;
+    color:#8f8678;
+    padding:10px 0 16px;
+  }
+  .hist-footer{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:12px;
+    margin-bottom:20px;
+  }
+  .hist-footer .life{ color:#c9a05c; font-weight:700; }
+  .clear-link{
+    background:none;
+    border:none;
+    color:#a24b3c;
+    font-size:12px;
+    text-decoration:underline;
+    cursor:pointer;
+  }
+  .modal hr{
+    border:none;
+    border-top:1px solid rgba(243,234,210,0.1);
+    margin:18px 0;
+  }
+  .close-btn{
+    margin-top:16px;
+    width:100%;
+  }
+</style>
+</head>
+<body>
+
+<button class="gear" id="gearBtn" aria-label="Settings">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+</button>
+
+<span class="status" id="status">saved</span>
+
+<div class="stage">
+  <div class="label">Tap anywhere to count</div>
+  <div class="digit-box" id="digitBox">0</div>
+  <div class="desc">Every tap on this page adds one. Your count is saved automatically and stays put even if you close the browser.</div>
+  <button class="sheet-btn" id="sheetBtn"><span class="dot"></span>Set up Google Sheet</button>
+</div>
+
+<div class="bottom-bar">
+  <button id="minusBtn">
+    <span class="sym sub-sym">–</span>
+    <span class="word">Subtract</span>
+  </button>
+  <button id="resetBtn">
+    <span class="reset-word">Reset</span>
+    <span class="reset-sub">Back to 0</span>
+  </button>
+  <button id="plusBtn">
+    <span class="sym add-sym">+</span>
+    <span class="word">Add</span>
+  </button>
+</div>
+
+<div class="overlay" id="resetOverlay">
+  <div class="modal">
+    <h3>Reset the count to zero?</h3>
+    <p>Your current total will be saved to your history first. This can't be undone.</p>
+    <div class="row">
+      <button class="action" id="cancelReset">Cancel</button>
+      <button class="action confirm" id="confirmReset">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="hist-section">
+      <h4>Saved counts (before each reset)</h4>
+      <div class="hist-list" id="histList"></div>
+      <div class="hist-footer" id="histFooter" style="display:none;">
+        <span>Lifetime total: <span class="life" id="lifeTotal">0</span></span>
+        <button class="clear-link" id="clearHistBtn">Clear history</button>
+      </div>
+    </div>
+    <hr>
+    <h3>Connect a Google Sheet</h3>
+    <p>This page can send your count to a Sheet using a small free script you set up once. It only writes; the page never reads your data back. Open Extensions → Apps Script in a Sheet, paste a small write-only script, deploy it as a web app, and paste that URL here.</p>
+    <button class="action close-btn" id="closeSettings">Close</button>
+  </div>
+</div>
+
+<script>
+  const COUNT_KEY = 'tally:count';
+  const HISTORY_KEY = 'tally:history';
+
+  let count = 0;
+  let history = [];
+
+  const digitBox = document.getElementById('digitBox');
+  const statusEl = document.getElementById('status');
+  const resetOverlay = document.getElementById('resetOverlay');
+  const settingsOverlay = document.getElementById('settingsOverlay');
+  const histList = document.getElementById('histList');
+  const histFooter = document.getElementById('histFooter');
+  const lifeTotal = document.getElementById('lifeTotal');
+
+  function renderCount(){
+    digitBox.textContent = String(Math.max(count, 0));
+  }
+
+  function flashStatus(text){
+    statusEl.textContent = text;
+    statusEl.classList.add('show');
+    clearTimeout(flashStatus._t);
+    flashStatus._t = setTimeout(()=> statusEl.classList.remove('show'), 900);
+  }
+
+  async function persistCount(){
+    try{
+      await window.storage.set(COUNT_KEY, String(count));
+      flashStatus('saved');
+    }catch(e){
+      console.error('save failed', e);
+      flashStatus('save failed');
+    }
+  }
+
+  async function persistHistory(){
+    try{
+      await window.storage.set(HISTORY_KEY, JSON.stringify(history));
+    }catch(e){
+      console.error('history save failed', e);
+    }
+  }
+
+  function renderHistory(){
+    histList.innerHTML = '';
+    if(history.length === 0){
+      histList.innerHTML = '<div class="hist-empty">Nothing saved yet — resets will land here.</div>';
+      histFooter.style.display = 'none';
+      return;
+    }
+    histFooter.style.display = 'flex';
+    let lifetime = 0;
+    const ordered = [...history].reverse();
+    for(const entry of ordered){
+      lifetime += entry.count;
+      const row = document.createElement('div');
+      row.className = 'hist-row';
+      const date = new Date(entry.timestamp);
+      const dateStr = date.toLocaleString(undefined, { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      row.innerHTML = `<span class="ts">${dateStr}</span><span class="val">${entry.count}</span>`;
+      histList.appendChild(row);
+    }
+    lifeTotal.textContent = lifetime;
+  }
+
+  function changeCount(delta){
+    count = Math.max(0, count + delta);
+    renderCount();
+    persistCount();
+  }
+
+  document.body.addEventListener('click', (e) => {
+    if(e.target.closest('.gear') || e.target.closest('.bottom-bar') || e.target.closest('.overlay') || e.target.closest('.sheet-btn')) return;
+    changeCount(1);
+  });
+
+  document.getElementById('plusBtn').addEventListener('click', (e) => { e.stopPropagation(); changeCount(1); });
+  document.getElementById('minusBtn').addEventListener('click', (e) => { e.stopPropagation(); changeCount(-1); });
+
+  document.getElementById('resetBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    resetOverlay.classList.add('show');
+  });
+  document.getElementById('cancelReset').addEventListener('click', () => resetOverlay.classList.remove('show'));
+  resetOverlay.addEventListener('click', (e) => { if(e.target === resetOverlay) resetOverlay.classList.remove('show'); });
+
+  document.getElementById('confirmReset').addEventListener('click', async () => {
+    if(count > 0){
+      history.push({ timestamp: Date.now(), count: count });
+      await persistHistory();
+      renderHistory();
+    }
+    count = 0;
+    renderCount();
+    await persistCount();
+    resetOverlay.classList.remove('show');
+    flashStatus('reset');
+  });
+
+  document.getElementById('gearBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsOverlay.classList.add('show');
+  });
+  document.getElementById('sheetBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    settingsOverlay.classList.add('show');
+  });
+  document.getElementById('closeSettings').addEventListener('click', () => settingsOverlay.classList.remove('show'));
+  settingsOverlay.addEventListener('click', (e) => { if(e.target === settingsOverlay) settingsOverlay.classList.remove('show'); });
+
+  document.getElementById('clearHistBtn').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    history = [];
+    await persistHistory();
+    renderHistory();
+    flashStatus('cleared');
+  });
+
+  async function init(){
+    renderCount();
+    try{
+      const c = await window.storage.get(COUNT_KEY);
+      if(c && c.value != null) count = parseInt(c.value, 10) || 0;
+    }catch(e){ count = 0; }
+    try{
+      const h = await window.storage.get(HISTORY_KEY);
+      if(h && h.value) history = JSON.parse(h.value);
+    }catch(e){ history = []; }
+    renderCount();
+    renderHistory();
+  }
+
+  init();
+</script>
+
+</body>
+</html>
